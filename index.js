@@ -57,6 +57,54 @@
 // });
 
 
+// const express = require("express");
+// const { exec } = require("child_process");
+
+// const app = express();
+// const PORT = 4000;
+
+// app.use(express.json());
+
+// app.post("/self-destruct", (req, res) => {
+//   const { token } = req.body;
+//   const secureToken = "your-secure-token"; 
+
+//   if (token !== secureToken) {
+//     return res.status(403).json({ message: "Unauthorized" });
+//   }
+
+//   console.log('Self-destruct sequence initiated');
+
+//   const pm2ProcessName = "destroy";  // Replace with your PM2 app's name or ID
+//   const directoryToRemove = "./tobedeleted";
+
+//   // Stop the PM2 process and delete it
+//   exec(`pm2 stop ${pm2ProcessName} && pm2 delete ${pm2ProcessName}`, (error, stdout, stderr) => {
+//     if (error) {
+//       console.error(`Error stopping/deleting PM2 process: ${error.message}`);
+//       return res.status(500).json({ message: "Failed to stop/delete PM2 process" });
+//     }
+    
+//     console.log(`PM2 process stopped and deleted: ${stdout}`);
+
+//     // Now delete the folder
+//     exec(`rm -rf ${directoryToRemove}`, (error, stdout, stderr) => {
+//       if (error) {
+//         console.error(`Error deleting folder: ${error.message}`);
+//         return res.status(500).json({ message: "Failed to delete folder" });
+//       }
+
+//       console.log(`Folder Deleted: ${stdout}`);
+//       res.status(200).json({ message: "App directory and PM2 process successfully destroyed" });
+//     });
+//   });
+// });
+
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
+
+
 const express = require("express");
 const { exec } = require("child_process");
 
@@ -67,15 +115,14 @@ app.use(express.json());
 
 app.post("/self-destruct", (req, res) => {
   const { token } = req.body;
-  const secureToken = "your-secure-token"; 
+  const secureToken = "your-secure-token"; // Use your secure token here
 
   if (token !== secureToken) {
     return res.status(403).json({ message: "Unauthorized" });
   }
 
   console.log('Self-destruct sequence initiated');
-
-  const pm2ProcessName = "destroy";  // Replace with your PM2 app's name or ID
+  const pm2ProcessName = "your-pm2-app-name"; // Replace with your PM2 app's name or ID
   const directoryToRemove = "./tobedeleted";
 
   // Stop the PM2 process and delete it
@@ -84,22 +131,31 @@ app.post("/self-destruct", (req, res) => {
       console.error(`Error stopping/deleting PM2 process: ${error.message}`);
       return res.status(500).json({ message: "Failed to stop/delete PM2 process" });
     }
-    
+
     console.log(`PM2 process stopped and deleted: ${stdout}`);
 
-    // Now delete the folder
-    exec(`rm -rf ${directoryToRemove}`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error deleting folder: ${error.message}`);
-        return res.status(500).json({ message: "Failed to delete folder" });
-      }
+    // Attempt to delete the folder with retry logic
+    function deleteFolderWithRetry(attempts = 3) {
+      exec(`rm -rf ${directoryToRemove}`, (error, stdout, stderr) => {
+        if (error && attempts > 0) {
+          console.error(`Error deleting folder: ${error.message}. Retrying...`);
+          setTimeout(() => deleteFolderWithRetry(attempts - 1), 1000);  // Retry after 1 second
+        } else if (error) {
+          console.error(`Failed to delete folder after retries: ${error.message}`);
+          return res.status(500).json({ message: "Failed to delete folder" });
+        } else {
+          console.log(`Folder Deleted: ${stdout}`);
+          res.status(200).json({ message: "App directory and PM2 process successfully destroyed" });
+        }
+      });
+    }
 
-      console.log(`Folder Deleted: ${stdout}`);
-      res.status(200).json({ message: "App directory and PM2 process successfully destroyed" });
-    });
+    // Start deleting the folder
+    deleteFolderWithRetry();
   });
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
