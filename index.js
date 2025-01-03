@@ -75,7 +75,7 @@ app.post("/self-destruct", (req, res) => {
 
   console.log('Self-destruct sequence initiated');
 
-  const pm2ProcessName = "your-pm2-app-name";  // Replace with your PM2 app's name or ID
+  const pm2ProcessName = "destroy";  // Replace with your PM2 app's name or ID
   const directoryToRemove = "./tobedeleted";
 
   // Stop the PM2 process and delete it
